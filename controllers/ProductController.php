@@ -2,12 +2,9 @@
 
 namespace app\controllers;
 
-use app\models\ProductProperty;
-use app\models\ProductPropertyValue;
 use Yii;
 use app\models\Product;
 use app\models\ProductSearch;
-use yii\base\Model;
 use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 use yii\filters\VerbFilter;
@@ -54,17 +51,8 @@ class ProductController extends Controller
      */
     public function actionView($id)
     {
-        $productProperties = ProductProperty::find()->all();
-        $productValues = [];
-        foreach ($productProperties as $productProperty) {
-            $productValues[] = ProductPropertyValue::findOne([
-                'product_id' => $id,
-                'property_id' => $productProperty->id
-            ]);
-        }
         return $this->render('view', [
-            'model' => $this->findModel($id),
-            'productValues' => $productValues,
+            'model' => (new \app\models\domain\Product())->getById($id),
         ]);
     }
 
@@ -75,24 +63,12 @@ class ProductController extends Controller
      */
     public function actionCreate()
     {
-        $model = new Product();
-        $productProperties = ProductProperty::find()->all();
-        $productValues = [];
-        foreach ($productProperties as $productProperty) {
-            $productValues[] = new ProductPropertyValue(['property_id' => $productProperty->id]);
-        }
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            if (Model::loadMultiple($productValues, Yii::$app->request->post()) && Model::validateMultiple($productValues)) {
-                foreach ($productValues as $productValue) {
-                    $productValue->product_id = $model->id;
-                    $productValue->save(false);
-                }
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
+        $model = new \app\models\domain\Product();
+        if ($model->createProduct(Yii::$app->request->post())) {
+            return $this->redirect(['view', 'id' => $model->getId()]);
         } else {
             return $this->render('create', [
                 'model' => $model,
-                'productValues' => $productValues,
             ]);
         }
     }
@@ -105,26 +81,12 @@ class ProductController extends Controller
      */
     public function actionUpdate($id)
     {
-        $model = $this->findModel($id);
-        $productProperties = ProductProperty::find()->all();
-        $productValues = [];
-        foreach ($productProperties as $productProperty) {
-            $productValues[] = ProductPropertyValue::findOne([
-                'product_id' => $id,
-                'property_id' => $productProperty->id
-            ]);
-        }
-        if ($model->load(Yii::$app->request->post()) && $model->save()) {
-            if (Model::loadMultiple($productValues, Yii::$app->request->post()) && Model::validateMultiple($productValues)) {
-                foreach ($productValues as $productValue) {
-                    $productValue->save(false);
-                }
-                return $this->redirect(['view', 'id' => $model->id]);
-            }
+        $model = (new \app\models\domain\Product())->getById($id);
+        if ($model->updateProduct(Yii::$app->request->post())) {
+            return $this->redirect(['view', 'id' => $model->getId()]);
         } else {
             return $this->render('update', [
                 'model' => $model,
-                'productValues' => $productValues,
             ]);
         }
     }
